@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>L'Univers Électromagnétique - Visualisation 3D Interactive</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: radial-gradient(ellipse at center, #0f0f23 0%, #000000 100%);
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.5;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .maxwell-equation {
+            background: linear-gradient(45deg, #1a1a2e, #16213e);
+            padding: 1.5rem;
+            margin: 2rem auto;
+            border-radius: 15px;
+            border: 2px solid #00d4ff;
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.3);
+            text-align: center;
+            max-width: 800px;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { box-shadow: 0 0 20px rgba(0, 212, 255, 0.3); }
+            to { box-shadow: 0 0 40px rgba(0, 212, 255, 0.6); }
+        }
+
+        .equation {
+            font-size: 1.8rem;
+            font-family: 'Courier New', monospace;
+            color: #00ff88;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 2rem;
+            padding: 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .visualization-container {
+            position: relative;
+            background: linear-gradient(145deg, #0a0a0a, #1a1a1a);
+            border-radius: 20px;
+            border: 2px solid #333;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 600px;
+            position: relative;
+        }
+
+        .controls-panel {
+            background: linear-gradient(145deg, #1e1e1e, #2a2a2a);
+            border-radius: 20px;
+            border: 2px solid #444;
+            padding: 2rem;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            height: fit-content;
+        }
+
+        .control-group {
+            margin-bottom: 2rem;
+        }
+
+        .control-group h3 {
+            color: #00d4ff;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        .slider-container {
+            margin-bottom: 1.5rem;
+        }
+
+        .slider-container label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #ccc;
+            font-size: 0.9rem;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 5px;
+            background: linear-gradient(90deg, #333, #666);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+            margin-bottom: 0.5rem;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #00d4ff, #00ff88);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #00d4ff, #00ff88);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        .value-display {
+            color: #00ff88;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            text-align: right;
+        }
+
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .preset-btn {
+            padding: 0.8rem;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .preset-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+        }
+
+        .info-panel {
+            background: linear-gradient(145deg, #0f1419, #1a1f2e);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            border: 1px solid #333;
+        }
+
+        .info-panel h4 {
+            color: #00d4ff;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .info-panel p {
+            color: #aaa;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin: 1rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 4px;
+            border-radius: 2px;
+        }
+
+        .electric { background: #ff3366; }
+        .magnetic { background: #3366ff; }
+        .propagation { background: #ffaa00; }
+
+        .play-controls {
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        .play-btn {
+            padding: 1rem 2rem;
+            background: linear-gradient(45deg, #ff6b35, #f7931e);
+            border: none;
+            border-radius: 50px;
+            color: white;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 20px rgba(255, 107, 53, 0.3);
+        }
+
+        .play-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 30px rgba(255, 107, 53, 0.5);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                padding: 1rem;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .equation {
+                font-size: 1.4rem;
+            }
+            
+            #canvas-container {
+                height: 400px;
+            }
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #00d4ff;
+            font-size: 1.2rem;
+            text-align: center;
+        }
+
+        .spinner {
+            border: 3px solid rgba(0, 212, 255, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid #00d4ff;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>L'Univers Électromagnétique</h1>
+        <p>Visualisation 3D Interactive des Équations de Maxwell</p>
+    </div>
+
+    <div class="maxwell-equation">
+        <div class="equation">E(z,t) = ∫ A(k) e^(i(kz-ωt)) dk</div>
+        <p style="margin-top: 1rem; color: #ccc;">Équation fondamentale des ondes électromagnétiques selon Maxwell</p>
+    </div>
+
+    <div class="container">
+        <div class="visualization-container">
+            <div id="canvas-container">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Initialisation de la visualisation 3D...
+                </div>
+            </div>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color electric"></div>
+                    <span>Champ Électrique (E)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color magnetic"></div>
+                    <span>Champ Magnétique (B)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color propagation"></div>
+                    <span>Direction de propagation</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls-panel">
+            <div class="control-group">
+                <h3>⚡ Paramètres de l'Onde</h3>
+                
+                <div class="slider-container">
+                    <label>Fréquence (Hz)</label>
+                    <input type="range" id="frequency" min="0.1" max="5" step="0.1" value="1">
+                    <div class="value-display" id="freq-value">1.0 Hz</div>
+                </div>
+
+                <div class="slider-container">
+                    <label>Amplitude Électrique</label>
+                    <input type="range" id="amplitude-e" min="0.1" max="3" step="0.1" value="1">
+                    <div class="value-display" id="amp-e-value">1.0</div>
+                </div>
+
+                <div class="slider-container">
+                    <label>Amplitude Magnétique</label>
+                    <input type="range" id="amplitude-b" min="0.1" max="3" step="0.1" value="1">
+                    <div class="value-display" id="amp-b-value">1.0</div>
+                </div>
+
+                <div class="slider-container">
+                    <label>Vitesse de propagation (×10⁸ m/s)</label>
+                    <input type="range" id="speed" min="1" max="5" step="0.1" value="3">
+                    <div class="value-display" id="speed-value">3.0 ×10⁸ m/s</div>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>📊 Visualisation</h3>
+                
+                <div class="slider-container">
+                    <label>Nombre d'ondes</label>
+                    <input type="range" id="wave-count" min="1" max="5" step="1" value="2">
+                    <div class="value-display" id="wave-count-value">2</div>
+                </div>
+
+                <div class="slider-container">
+                    <label>Longueur d'onde visible</label>
+                    <input type="range" id="wave-length" min="5" max="20" step="1" value="10">
+                    <div class="value-display" id="wave-length-value">10</div>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>🎛️ Préréglages</h3>
+                <div class="preset-buttons">
+                    <button class="preset-btn" onclick="setPreset('visible')">Lumière Visible</button>
+                    <button class="preset-btn" onclick="setPreset('radio')">Ondes Radio</button>
+                    <button class="preset-btn" onclick="setPreset('wifi')">Wi-Fi (2.4 GHz)</button>
+                    <button class="preset-btn" onclick="setPreset('xray')">Rayons X</button>
+                </div>
+            </div>
+
+            <div class="play-controls">
+                <button class="play-btn" id="play-pause-btn" onclick="toggleAnimation()">⏸️ Pause</button>
+            </div>
+
+            <div class="info-panel">
+                <h4>🧠 Comprendre la Visualisation</h4>
+                <p>Cette simulation montre la propagation des ondes électromagnétiques selon les équations de Maxwell. 
+                Le champ électrique (rouge) et le champ magnétique (bleu) oscillent perpendiculairement l'un à l'autre 
+                et à la direction de propagation (jaune), créant une onde qui se propage à la vitesse de la lumière.</p>
+            </div>
+        </div>
+    </div>
+
+<script>
+        let scene, camera, renderer, animationId;
+        let electricField = [];
+        let magneticField = [];
+        let propagationArrows = [];
+        let isPlaying = true;
+        let time = 0;
+
+        // Paramètres de l'onde
+        let waveParams = {
+            frequency: 1.0,
+            amplitudeE: 1.0,
+            amplitudeB: 1.0,
+            speed: 3.0,
+            waveCount: 2,
+            waveLength: 10
+        };
+
+        function init() {
+            // Création de la scène
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000011);
+
+            // Caméra
+            camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+            camera.position.set(15, 10, 15);
+            camera.lookAt(0, 0, 0);
+
+            // Renderer
+            const container = document.getElementById('canvas-container');
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            // Éclairage
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 10, 5);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+
+            // Grille de référence
+            const gridHelper = new THREE.GridHelper(30, 30, 0x444444, 0x222222);
+            scene.add(gridHelper);
+
+            // Axes de coordonnées
+            const axesHelper = new THREE.AxesHelper(5);
+            scene.add(axesHelper);
+
+            createWaveVisualization();
+            setupControls();
+            animate();
+
+            // Supprimer le message de chargement
+            const loading = container.querySelector('.loading');
+            if (loading) loading.remove();
+        }
+
+        function createWaveVisualization() {
+            // Nettoyer les anciennes ondes
+            electricField.forEach(curve => scene.remove(curve));
+            magneticField.forEach(curve => scene.remove(curve));
+            propagationArrows.forEach(arrow => scene.remove(arrow));
+            
+            electricField = [];
+            magneticField = [];
+            propagationArrows = [];
+
+            const points = 100;
+            const zRange = waveParams.waveLength;
+
+            for (let w = 0; w < waveParams.waveCount; w++) {
+                // Points pour les courbes des champs (tous deux se propagent selon Z)
+                const electricPoints = [];
+                const magneticPoints = [];
+                
+                for (let i = 0; i <= points; i++) {
+                    const z = (i / points) * zRange - zRange / 2;
+                    // E⃗ se propage selon Z mais oscille selon Y
+                    electricPoints.push(new THREE.Vector3(0, 0, z));
+                    // B⃗ se propage aussi selon Z mais oscille selon X
+                    magneticPoints.push(new THREE.Vector3(0, 0, z));
+                }
+
+                // Courbe du champ électrique E⃗ (se propage selon Z, oscille selon Y)
+                const electricGeometry = new THREE.BufferGeometry().setFromPoints(electricPoints);
+                const electricMaterial = new THREE.LineBasicMaterial({ 
+                    color: 0xff3366, 
+                    linewidth: 3,
+                    transparent: true,
+                    opacity: 0.8 
+                });
+                const electricCurve = new THREE.Line(electricGeometry, electricMaterial);
+                electricCurve.position.y = w * 0.5; // Léger décalage pour voir les ondes multiples
+                scene.add(electricCurve);
+                electricField.push(electricCurve);
+
+                // Courbe du champ magnétique B⃗ (se propage selon Z, oscille selon X)
+                const magneticGeometry = new THREE.BufferGeometry().setFromPoints(magneticPoints);
+                const magneticMaterial = new THREE.LineBasicMaterial({ 
+                    color: 0x3366ff, 
+                    linewidth: 3,
+                    transparent: true,
+                    opacity: 0.8 
+                });
+                const magneticCurve = new THREE.Line(magneticGeometry, magneticMaterial);
+                magneticCurve.position.y = w * 0.5;
+                scene.add(magneticCurve);
+                magneticField.push(magneticCurve);
+
+                // Flèches de propagation selon Z
+                const arrowGeometry = new THREE.ConeGeometry(0.2, 0.8, 8);
+                const arrowMaterial = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+                
+                for (let i = 0; i < 5; i++) {
+                    const arrow = new THREE.Mesh(arrowGeometry, arrowMaterial);
+                    arrow.position.set(0, w * 0.5, (i - 2) * 2);
+                    arrow.rotation.x = Math.PI / 2; // Pointe selon +Z
+                    scene.add(arrow);
+                    propagationArrows.push(arrow);
+                }
+            }
+        }
+
+        function updateWaveVisualization() {
+            const k = 2 * Math.PI / waveParams.waveLength; // nombre d'onde
+            const omega = 2 * Math.PI * waveParams.frequency; // pulsation
+            const points = 100;
+            const zRange = waveParams.waveLength;
+
+            // Mise à jour du champ électrique E⃗ (propagation Z, oscillation Y)
+            electricField.forEach((curve, waveIndex) => {
+                const positions = curve.geometry.attributes.position.array;
+                
+                for (let i = 0; i <= points; i++) {
+                    const z = (i / points) * zRange - zRange / 2;
+                    const phase = k * z - omega * time + waveIndex * Math.PI / 4;
+                    
+                    // E⃗ se propage selon Z, oscille selon Y
+                    const eY = waveParams.amplitudeE * Math.sin(phase);
+                    positions[i * 3] = 0;     // X = 0
+                    positions[i * 3 + 1] = eY; // Y = amplitude * sin(phase)
+                    positions[i * 3 + 2] = z;  // Z = position de propagation
+                }
+                
+                curve.geometry.attributes.position.needsUpdate = true;
+            });
+
+            // Mise à jour du champ magnétique B⃗ (propagation Z, oscillation X)
+            magneticField.forEach((curve, waveIndex) => {
+                const positions = curve.geometry.attributes.position.array;
+                
+                for (let i = 0; i <= points; i++) {
+                    const z = (i / points) * zRange - zRange / 2;
+                    const phase = k * z - omega * time + waveIndex * Math.PI / 4;
+                    
+                    // B⃗ se propage selon Z, oscille selon X (déphasé de π/2 par rapport à E⃗)
+                    const bX = waveParams.amplitudeB * Math.cos(phase);
+                    positions[i * 3] = bX;     // X = amplitude * cos(phase)
+                    positions[i * 3 + 1] = 0;  // Y = 0
+                    positions[i * 3 + 2] = z;  // Z = position de propagation
+                }
+                
+                curve.geometry.attributes.position.needsUpdate = true;
+            });
+
+            // Animation des flèches de propagation
+            propagationArrows.forEach((arrow, index) => {
+                const offset = (time * waveParams.speed * 0.1) % 10;
+                arrow.position.z = ((index % 5) - 2) * 2 + offset - 5;
+                arrow.material.opacity = 0.5 + 0.5 * Math.sin(time * 2 + index);
+            });
+        }
+
+        function animate() {
+            if (isPlaying) {
+                time += 0.05;
+                updateWaveVisualization();
+            }
+
+            // Rotation automatique de la caméra
+            const radius = 20;
+            camera.position.x = radius * Math.cos(time * 0.1);
+            camera.position.z = radius * Math.sin(time * 0.1);
+            camera.lookAt(0, 0, 0);
+
+            renderer.render(scene, camera);
+            animationId = requestAnimationFrame(animate);
+        }
+
+        function setupControls() {
+            // Frequency control
+            const freqSlider = document.getElementById('frequency');
+            const freqValue = document.getElementById('freq-value');
+            freqSlider.addEventListener('input', (e) => {
+                waveParams.frequency = parseFloat(e.target.value);
+                freqValue.textContent = `${waveParams.frequency.toFixed(1)} Hz`;
+            });
+
+            // Electric amplitude control
+            const ampESlider = document.getElementById('amplitude-e');
+            const ampEValue = document.getElementById('amp-e-value');
+            ampESlider.addEventListener('input', (e) => {
+                waveParams.amplitudeE = parseFloat(e.target.value);
+                ampEValue.textContent = waveParams.amplitudeE.toFixed(1);
+            });
+
+            // Magnetic amplitude control
+            const ampBSlider = document.getElementById('amplitude-b');
+            const ampBValue = document.getElementById('amp-b-value');
+            ampBSlider.addEventListener('input', (e) => {
+                waveParams.amplitudeB = parseFloat(e.target.value);
+                ampBValue.textContent = waveParams.amplitudeB.toFixed(1);
+            });
+
+            // Speed control
+            const speedSlider = document.getElementById('speed');
+            const speedValue = document.getElementById('speed-value');
+            speedSlider.addEventListener('input', (e) => {
+                waveParams.speed = parseFloat(e.target.value);
+                speedValue.textContent = `${waveParams.speed.toFixed(1)} ×10⁸ m/s`;
+            });
+
+            // Wave count control
+            const waveCountSlider = document.getElementById('wave-count');
+            const waveCountValue = document.getElementById('wave-count-value');
+            waveCountSlider.addEventListener('input', (e) => {
+                waveParams.waveCount = parseInt(e.target.value);
+                waveCountValue.textContent = waveParams.waveCount;
+                createWaveVisualization();
+            });
+
+            // Wave length control
+            const waveLengthSlider = document.getElementById('wave-length');
+            const waveLengthValue = document.getElementById('wave-length-value');
+            waveLengthSlider.addEventListener('input', (e) => {
+                waveParams.waveLength = parseInt(e.target.value);
+                waveLengthValue.textContent = waveParams.waveLength;
+                createWaveVisualization();
+            });
+        }
+
+        function setPreset(type) {
+            switch (type) {
+                case 'visible':
+                    updateSlider('frequency', 5, 'freq-value', (val) => `${val.toFixed(1)} Hz`);
+                    updateSlider('amplitude-e', 1.5, 'amp-e-value', (val) => val.toFixed(1));
+                    updateSlider('amplitude-b', 1.5, 'amp-b-value', (val) => val.toFixed(1));
+                    break;
+                case 'radio':
+                    updateSlider('frequency', 0.5, 'freq-value', (val) => `${val.toFixed(1)} Hz`);
+                    updateSlider('amplitude-e', 2.0, 'amp-e-value', (val) => val.toFixed(1));
+                    updateSlider('amplitude-b', 1.0, 'amp-b-value', (val) => val.toFixed(1));
+                    break;
+                case 'wifi':
+                    updateSlider('frequency', 2.4, 'freq-value', (val) => `${val.toFixed(1)} Hz`);
+                    updateSlider('amplitude-e', 1.0, 'amp-e-value', (val) => val.toFixed(1));
+                    updateSlider('amplitude-b', 1.0, 'amp-b-value', (val) => val.toFixed(1));
+                    break;
+                case 'xray':
+                    updateSlider('frequency', 4.5, 'freq-value', (val) => `${val.toFixed(1)} Hz`);
+                    updateSlider('amplitude-e', 2.5, 'amp-e-value', (val) => val.toFixed(1));
+                    updateSlider('amplitude-b', 2.5, 'amp-b-value', (val) => val.toFixed(1));
+                    break;
+            }
+        }
+
+        function updateSlider(sliderId, value, valueId, formatter) {
+            const slider = document.getElementById(sliderId);
+            const valueDisplay = document.getElementById(valueId);
+            slider.value = value;
+            valueDisplay.textContent = formatter(value);
+            slider.dispatchEvent(new Event('input'));
+        }
+
+        function toggleAnimation() {
+            isPlaying = !isPlaying;
+            const btn = document.getElementById('play-pause-btn');
+            btn.textContent = isPlaying ? '⏸️ Pause' : '▶️ Play';
+        }
+
+        // Responsivité
+        function onWindowResize() {
+            const container = document.getElementById('canvas-container');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        window.addEventListener('resize', onWindowResize);
+
+        // Initialisation
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
